@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import url('https://googleapis.com');
+
+@theme {
+    /* Memberikan penamaan semantik berdasarkan palet Anda */
+    --color-ropi-dark: #0D47A1;
+    /* Biru Paling Gelap */
+    --color-ropi-primary: #2196F3;
+    /* Biru Primer */
+    --color-ropi-light: #90CAF9;
+    /* Biru Muda */
+    --color-ropi-bg: #E3F2FD;
+    /* Biru Paling Terang */
+
+    /* font ropi */
+    --font-sans: "Inter", system-ui, sans-serif;
+}
+
+* {
+    font-family: "Open Sans Variable", system-ui, sans-serif;
+}
