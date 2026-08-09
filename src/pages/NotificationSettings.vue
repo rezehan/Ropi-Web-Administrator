@@ -19,7 +19,7 @@ function saveSettings() {
 </script>
 
 <template>
-    <div class="max-w-3xl mx-auto space-y-6">
+    <div class="mx-auto space-y-6">
         <Card title="Preferensi Notifikasi" subtitle="Atur kapan kamu ingin menerima peringatan">
             <ToggleSwitch v-model="settings.anomaliPush" label="Notifikasi Anomali"
                 description="Alert push saat status berubah menjadi Anomali" />

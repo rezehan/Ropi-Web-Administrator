@@ -1,14 +1,75 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { ShieldAlert, Info, Clock } from 'lucide-vue-next'
-// Nantinya kita import axios dan dayjs di sini
+import { computed, inject } from 'vue'
+import { ShieldAlert, Info, Clock, AlertTriangle } from 'lucide-vue-next'
+import type { RopiAlarmPayload } from '@/types/ropi'
+import type { useRopiRealtime } from '@/composables/useRopiRealtime'
 
-// Data dummy sementara sebelum ada API
-const logs = ref([
-    { id: 1, type: 'CRITICAL', sensor: 'Gyroscope', message: 'Indikasi Fall Detection terpicu (Kemiringan > 60°)', timestamp: '2026-08-07T14:10:00' },
-    { id: 2, type: 'WARNING', sensor: 'Ultrasonic', message: 'Objek mendekat terlalu cepat (< 10cm)', timestamp: '2026-08-07T13:45:22' },
-    { id: 3, type: 'INFO', sensor: 'System', message: 'Koneksi ulang modul WiFi berhasil', timestamp: '2026-08-07T10:12:05' },
-])
+type LogLevel = 'CRITICAL' | 'WARNING' | 'INFO'
+
+interface LogEntry {
+    id: string
+    type: LogLevel
+    sensor: string
+    message: string
+    timestamp: number
+}
+
+// Disediakan sekali di AppLayout.vue lewat provide('ropiRealtime', useRopiRealtime()),
+// jadi di sini tinggal inject, tidak buka subscription MQTT baru.
+const ropiRealtime = inject<ReturnType<typeof useRopiRealtime>>('ropiRealtime')
+
+/** Ubah satu payload alarm mentah dari MQTT jadi baris log yang siap ditampilkan. */
+function mapAlarmToLog(alarm: RopiAlarmPayload, index: number): LogEntry {
+    if (alarm.event === 'bahaya_jatuh') {
+        return {
+            id: `${alarm.device_id}-${alarm.ts}-${index}`,
+            type: 'CRITICAL',
+            sensor: 'Gyroscope',
+            message: `Indikasi jatuh terdeteksi pada perangkat ${alarm.device_id}`,
+            timestamp: alarm.ts
+        }
+    }
+
+    if (alarm.event === 'bahaya_tarikan') {
+        return {
+            id: `${alarm.device_id}-${alarm.ts}-${index}`,
+            type: 'CRITICAL',
+            sensor: 'Sensor Tarikan',
+            message: `Indikasi tarikan darurat terdeteksi pada perangkat ${alarm.device_id}`,
+            timestamp: alarm.ts
+        }
+    }
+
+    // Fallback untuk event lain yang belum ada mapping khusus (mis. event baru di masa depan).
+    return {
+        id: `${alarm.device_id}-${alarm.ts}-${index}`,
+        type: 'INFO',
+        sensor: 'System',
+        message: `Event "${alarm.event}" diterima dari ${alarm.device_id}`,
+        timestamp: alarm.ts
+    }
+}
+
+// Riwayat Anomali cuma nampilin kejadian bahaya sungguhan, bukan heartbeat/telemetry rutin
+// (event "normal" / "telemetry" sengaja di-skip di sini).
+const logs = computed<LogEntry[]>(() => {
+    const history = ropiRealtime?.alarmHistory.value ?? []
+    return history
+        .filter((alarm) => alarm.event === 'bahaya_jatuh' || alarm.event === 'bahaya_tarikan')
+        .map(mapAlarmToLog)
+})
+
+/**
+ * ts dari firmware kadang epoch detik, kadang epoch milidetik — nilai di bawah
+ * 1e12 hampir pasti detik (epoch ms untuk tanggal sekarang sudah > 1.7 x 10^12).
+ */
+function formatTimestamp(ts: number): string {
+    const ms = ts < 1e12 ? ts * 1000 : ts
+    return new Date(ms).toLocaleString('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+    })
+}
 </script>
 
 <template>
@@ -16,16 +77,18 @@ const logs = ref([
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h3 class="text-xl font-bold text-slate-800">Log Insiden Sistem</h3>
-                <p class="text-sm text-slate-500">Merekam 50 anomali terakhir dari sensor_data</p>
+                <p class="text-sm text-slate-500">
+                    Merekam hingga 100 insiden anomali terakhir secara real-time via MQTT
+                </p>
             </div>
-            <button
-                class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors">
-                Refresh Data
-            </button>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
+            <div v-if="logs.length === 0" class="py-16 text-center text-slate-500 text-sm">
+                Belum ada anomali yang tercatat.
+            </div>
+
+            <div v-else class="overflow-x-auto">
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-medium">
                         <tr>
@@ -56,8 +119,7 @@ const logs = ref([
                             <td
                                 class="px-6 py-4 text-right text-slate-500 font-mono text-xs flex items-center justify-end gap-2">
                                 <Clock class="w-3.5 h-3.5 opacity-70" />
-                                <!-- Nanti bagian ini kita format dengan dayjs -->
-                                {{ log.timestamp }}
+                                {{ formatTimestamp(log.timestamp) }}
                             </td>
                         </tr>
                     </tbody>

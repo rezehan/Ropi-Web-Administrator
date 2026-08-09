@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, provide } from 'vue'
 import {
     LayoutDashboard,
     AlertTriangle,
@@ -13,6 +13,7 @@ import {
 import SidebarNavItem from '@/components/layout/SidebarNavItem.vue'
 import NotificationBell from '@/components/layout/NotificationBell.vue'
 import ProfileMenu from '@/components/layout/ProfileMenu.vue'
+import { useRopiRealtime } from '@/composables/useRopiRealtime'
 
 const navItems = [
     { to: '/', label: 'Telemetri', icon: LayoutDashboard },
@@ -21,6 +22,12 @@ const navItems = [
     { to: '/tindak-lanjut', label: 'Catatan Tindak Lanjut', icon: ClipboardList },
     { to: '/notifikasi', label: 'Notifikasi', icon: BellRing }
 ]
+
+// Dipanggil sekali di sini (bukan di tiap halaman) supaya subscribe MQTT gak
+// putus-nyambung tiap kali pindah rute. Semua halaman/komponen anak tinggal
+// inject('ropiRealtime') untuk pakai data yang sama.
+const ropiRealtime = useRopiRealtime()
+provide('ropiRealtime', ropiRealtime)
 
 // Sidebar hanya berupa drawer di layar kecil (< lg). Di layar besar selalu tampil,
 // state ini diabaikan karena class translate di-override oleh breakpoint lg:.
@@ -48,7 +55,7 @@ function handleLogout() {
             :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
             <div class="p-6 flex items-center justify-between gap-3 border-b border-slate-700/50">
                 <div class="flex items-center gap-3 min-w-0">
-                    <Cpu class="w-8 h-8 text-emerald-400 shrink-0" />
+                    <img src="/public/ROPI.png" alt="RoPi Logo" width="50px">
                     <h1 class="text-xl font-bold text-slate-400 tracking-tight truncate">RoPi Admin</h1>
                 </div>
                 <button type="button" class="p-1.5 rounded-lg hover:bg-slate-100 lg:hidden" @click="closeSidebar">
