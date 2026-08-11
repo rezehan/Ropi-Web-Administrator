@@ -5,15 +5,20 @@ import type {
     RopiStatusPayload,
     RopiPhotoStatusPayload,
     RopiRawPayload,
-    RopiEvent
+    RopiEvent,
+    RopiStatusAnomali
 } from '@/types/ropi'
 
 // Topic DISESUAIKAN dengan firmware (secrets.h), bukan skema ideal ropi/{device_id}/xxx:
 // - Status SEMUA device (node & cam) dipublish rata ke "ropi/status" — device_id
 //   dibedakan lewat field di dalam payload, BUKAN lewat path topic.
 // - Telemetry node dipublish ke "ropi/{device_id}/telemetry" (bukan "/alarm").
+//   Untuk node "ropi-esp32-01" persis: "ropi/ropi-esp32-01/telemetry".
 // - Status hasil foto CAM dipublish ke "ropi/photo_status".
-// - "ropi/capture_trigger" dipakai buat MENYURUH cam ambil foto (publish, bukan subscribe).
+// - "ropi/capture_trigger" dipakai buat MENYURUH cam ambil foto — dipublish baik
+//   dari frontend (manual, lewat triggerCapture()) MAUPUN otomatis oleh node saat
+//   status bahaya terkonfirmasi (lihat isConfirmedDanger di firmware). Kita cuma
+//   publish ke sini, tidak subscribe.
 const STATUS_TOPIC = 'ropi/status'
 const TELEMETRY_TOPIC = 'ropi/+/telemetry'
 const PHOTO_STATUS_TOPIC = 'ropi/photo_status'
@@ -21,15 +26,30 @@ const CAPTURE_TRIGGER_TOPIC = 'ropi/capture_trigger'
 const MAX_HISTORY = 100
 
 const VALID_EVENTS: RopiEvent[] = ['normal', 'telemetry', 'bahaya_tarikan', 'bahaya_jatuh']
+const VALID_STATUS_ANOMALI: RopiStatusAnomali[] = ['normal', 'waspada', 'anomali']
 
-/** Ambil device id dari payload apa pun variasi nama fieldnya. */
+/** Ambil device id dari payload apa pun variasi nama fieldnya.
+ *  Firmware TIDAK KONSISTEN: telemetry pakai "device", capture_trigger pakai
+ *  "device_id" — makanya dua-duanya dicek di sini. */
 function pickDeviceId(raw: RopiRawPayload): string {
     return raw.device_id ?? raw.device ?? 'unknown-device'
 }
 
-/** Ambil timestamp, terima "ts" atau "timestamp", fallback ke waktu sekarang. */
+/** Ambil timestamp mentah, terima "ts" atau "timestamp".
+ *  PENTING: pada node "ropi-esp32-01" nilai "ts" ini adalah millis() sejak
+ *  ESP32 boot — BUKAN epoch time. Reset ke angka kecil tiap device restart.
+ *  Jangan dipakai buat nampilin "waktu kejadian" ke user, pakai received_at. */
 function pickTimestamp(raw: RopiRawPayload): number {
     return raw.ts ?? raw.timestamp ?? Date.now()
+}
+
+/** Ambil level bahaya sebenarnya. Field "event" pada node ini SELALU "telemetry",
+ *  jadi level bahaya harus dibaca dari status_anomali ("normal"/"waspada"/"anomali"),
+ *  bukan dari event. */
+function pickStatusAnomali(raw: RopiRawPayload): RopiStatusAnomali {
+    return VALID_STATUS_ANOMALI.includes(raw.status_anomali as RopiStatusAnomali)
+        ? (raw.status_anomali as RopiStatusAnomali)
+        : 'normal'
 }
 
 function normalizeTelemetry(raw: RopiRawPayload): RopiAlarmPayload {
@@ -45,12 +65,38 @@ function normalizeTelemetry(raw: RopiRawPayload): RopiAlarmPayload {
     return {
         device_id: pickDeviceId(raw),
         event,
-        status_anomali: raw.status_anomali ?? (event === 'bahaya_tarikan' || event === 'bahaya_jatuh'),
-        gps_valid: raw.gps_valid ?? false,
+        // status_anomali dari firmware adalah STRING ("normal"/"waspada"/"anomali"),
+        // BUKAN boolean — jangan dipakai sebagai truthy check langsung
+        // (mis. `v-if="alarm.status_anomali"` akan selalu true karena string
+        // "normal" pun truthy). Bandingkan nilainya, mis.
+        // `alarm.status_anomali !== 'normal'`.
+        status_anomali: pickStatusAnomali(raw),
+
+        count: raw.count,
+
+        flex: raw.flex,
+        flex_percent: raw.flex_percent,
+        flex_sensor_ok: raw.flex_sensor_ok,
+
+        mic: raw.mic,
+        mic_percent: raw.mic_percent,
+
+        accel_x: raw.accel_x,
+        accel_y: raw.accel_y,
+        accel_z: raw.accel_z,
+        gyro_x: raw.gyro_x,
+        gyro_y: raw.gyro_y,
+        gyro_z: raw.gyro_z,
+        gerakan_percent: raw.gerakan_percent,
+
+        // firmware kirim 0/1 (number), bukan boolean asli — di-coerce di sini
+        gps_valid: Boolean(raw.gps_valid),
         latitude: raw.latitude,
         longitude: raw.longitude,
         satellites: raw.satellites,
-        ts: pickTimestamp(raw)
+
+        ts: pickTimestamp(raw),
+        received_at: Date.now()
     }
 }
 

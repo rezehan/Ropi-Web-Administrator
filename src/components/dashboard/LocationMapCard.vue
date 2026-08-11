@@ -18,9 +18,8 @@ const zoom = defineModel<number>('zoom', { default: 16 })
 </script>
 
 <template>
-    <div class="bg-white rounded-xl border border-ropi-light shadow-sm flex flex-col overflow-hidden h-full">
-        <div
-            class="px-5 py-4 border-b border-ropi-light/50 flex items-center gap-2 text-ropi-dark font-semibold bg-ropi-bg/30">
+    <div class="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden h-full">
+        <div class="px-5 py-4 border-b border-ropi-light/50 flex items-center gap-2 text-ropi-dark font-semibold">
             <MapPin class="w-5 h-5 text-ropi-primary" />
             Pelacakan Lokasi (Leaflet)
         </div>
@@ -42,7 +41,7 @@ const zoom = defineModel<number>('zoom', { default: 16 })
                 </l-map>
             </div>
 
-            <div class="bg-ropi-bg/50 rounded-lg p-3 border border-ropi-light/50 space-y-2">
+            <div class="bg-ropi-bg/50 rounded-lg p-3 space-y-2">
                 <div class="flex justify-between items-center text-sm">
                     <span class="text-ropi-dark/70 font-medium">Latitude:</span>
                     <span class="text-ropi-dark font-mono font-bold">{{ location[0].toFixed(4) }}</span>

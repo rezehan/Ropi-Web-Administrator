@@ -10,8 +10,8 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-    <div class="bg-white rounded-xl border border-ropi-light shadow-sm flex flex-col overflow-hidden h-full">
-        <div class="px-5 py-4 border-b border-ropi-light/50 flex items-center justify-between bg-ropi-bg/30">
+    <div class="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden h-full">
+        <div class="px-5 py-4 border-b border-ropi-light/50 flex items-center justify-between">
             <div class="flex items-center gap-2 text-ropi-dark font-semibold">
                 <Video class="w-5 h-5 text-ropi-primary" />
                 ESP32-CAM Live Feed (4:3)

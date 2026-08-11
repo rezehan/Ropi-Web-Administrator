@@ -55,7 +55,7 @@ function handleLogout() {
             :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
             <div class="p-6 flex items-center justify-between gap-3 border-b border-slate-700/50">
                 <div class="flex items-center gap-3 min-w-0">
-                    <img src="/public/ROPI.png" alt="RoPi Logo" width="50px">
+                    <img src="/ROPI.png" alt="RoPi Logo" width="50px">
                     <h1 class="text-xl font-bold text-slate-400 tracking-tight truncate">RoPi Admin</h1>
                 </div>
                 <button type="button" class="p-1.5 rounded-lg hover:bg-slate-100 lg:hidden" @click="closeSidebar">

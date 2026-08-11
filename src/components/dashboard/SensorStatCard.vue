@@ -18,7 +18,7 @@ const status = computed(() => getStatusMeta(props.percent, props.sensorOk))
 </script>
 
 <template>
-    <div class="bg-white p-5 rounded-xl border border-ropi-light shadow-sm flex items-start gap-4">
+    <div class="bg-white p-5 rounded-xl shadow-lg flex items-start gap-4">
         <div class="p-3 bg-ropi-bg text-ropi-primary rounded-lg shrink-0">
             <component :is="icon" class="w-6 h-6" />
         </div>

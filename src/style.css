@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://googleapis.com');
+/* @import url('https://googleapis.com'); */
 
 @theme {
     /* Memberikan penamaan semantik berdasarkan palet Anda */
@@ -17,5 +17,5 @@
 }
 
 * {
-    font-family: "Open Sans Variable", system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
 }

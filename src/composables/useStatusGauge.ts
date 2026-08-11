@@ -1,24 +1,23 @@
+// composables/useStatusGauge.ts
 import { ref, onMounted, onBeforeUnmount, watch, type Ref } from 'vue'
 import Chart from 'chart.js/auto'
 import type { Plugin } from 'chart.js'
-import { getGaugeColorForPercent } from './useSensorStatus'
+import { getStatusGaugeColor } from './useSensorStatus'
 
 const GAUGE_TRACK_COLOR = '#e2e8f0'
-const GAUGE_START_ANGLE = (135 * Math.PI) / 180 // radian, 0 = arah jam 3 (standar canvas)
+const GAUGE_START_ANGLE = (135 * Math.PI) / 180
 const GAUGE_SWEEP_ANGLE = (270 * Math.PI) / 180
 
-export function useBatteryGauge(targetPercent: Ref<number>) {
+export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean> = ref(true)) {
     const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-    // Nilai yang benar-benar digambar di gauge — beranimasi menuju targetPercent,
-    // bukan langsung sama dengan targetPercent (biar ada efek "mengisi").
     const displayPercent = ref(0)
 
     let chartInstance: Chart | null = null
     let animationFrameId: number | null = null
 
     const gaugePlugin: Plugin<'doughnut'> = {
-        id: 'batteryGauge',
+        id: 'statusGauge',
         afterDraw(chart) {
             const { ctx, chartArea } = chart
             const { left, right, top, bottom } = chartArea
@@ -36,17 +35,17 @@ export function useBatteryGauge(targetPercent: Ref<number>) {
             ctx.lineCap = 'round'
             ctx.lineWidth = lineWidth
 
-            // Track penuh (kapasitas total, 0-100%)
+            // Track penuh (skala 0-100%, tingkat kewaspadaan)
             ctx.beginPath()
             ctx.arc(centerX, centerY, arcRadius, GAUGE_START_ANGLE, GAUGE_START_ANGLE + GAUGE_SWEEP_ANGLE)
             ctx.strokeStyle = GAUGE_TRACK_COLOR
             ctx.stroke()
 
-            // Kapasitas terisi — warnanya ikut nilai animasi saat ini
+            // Bagian terisi — warnanya ikut status (normal/waspada/anomali/error) saat ini
             if (percent > 0) {
                 ctx.beginPath()
                 ctx.arc(centerX, centerY, arcRadius, GAUGE_START_ANGLE, valueEndAngle)
-                ctx.strokeStyle = getGaugeColorForPercent(percent)
+                ctx.strokeStyle = getStatusGaugeColor(percent, sensorOk.value)
                 ctx.stroke()
             }
 
@@ -104,6 +103,8 @@ export function useBatteryGauge(targetPercent: Ref<number>) {
 
     // Tiap targetPercent berubah (misal update dari MQTT), animasikan ke nilai baru
     watch(targetPercent, (newVal) => animateTo(newVal))
+    // Sensor error/pulih harus langsung ubah warna arc walau persennya sama
+    watch(sensorOk, () => chartInstance?.draw())
 
     onMounted(() => {
         createChart()
