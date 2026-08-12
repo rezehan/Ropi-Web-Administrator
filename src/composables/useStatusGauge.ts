@@ -8,9 +8,16 @@ const GAUGE_TRACK_COLOR = '#e2e8f0'
 const GAUGE_START_ANGLE = (135 * Math.PI) / 180
 const GAUGE_SWEEP_ANGLE = (270 * Math.PI) / 180
 
-export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean> = ref(true)) {
+export function useStatusGauge(
+    targetPercent: Ref<number>,
+    sensorOk: Ref<boolean> = ref(true),
+    // Opsional. Kalau diisi, warna arc PAKAI INI langsung (mis. warna dari
+    // status_anomali asli firmware lewat getStatusGaugeColorFromAnomali),
+    // bukan dihitung ulang dari percent+sensorOk. Dipakai ChildStatusCard
+    // biar warna arc gauge selalu konsisten sama badge & label status.
+    colorOverride: Ref<string | null> = ref(null)
+) {
     const canvasRef = ref<HTMLCanvasElement | null>(null)
-
     const displayPercent = ref(0)
 
     let chartInstance: Chart | null = null
@@ -35,17 +42,15 @@ export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean
             ctx.lineCap = 'round'
             ctx.lineWidth = lineWidth
 
-            // Track penuh (skala 0-100%, tingkat kewaspadaan)
             ctx.beginPath()
             ctx.arc(centerX, centerY, arcRadius, GAUGE_START_ANGLE, GAUGE_START_ANGLE + GAUGE_SWEEP_ANGLE)
             ctx.strokeStyle = GAUGE_TRACK_COLOR
             ctx.stroke()
 
-            // Bagian terisi — warnanya ikut status (normal/waspada/anomali/error) saat ini
             if (percent > 0) {
                 ctx.beginPath()
                 ctx.arc(centerX, centerY, arcRadius, GAUGE_START_ANGLE, valueEndAngle)
-                ctx.strokeStyle = getStatusGaugeColor(percent, sensorOk.value)
+                ctx.strokeStyle = colorOverride.value ?? getStatusGaugeColor(percent, sensorOk.value)
                 ctx.stroke()
             }
 
@@ -58,14 +63,12 @@ export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean
         chartInstance = new Chart(canvasRef.value, {
             type: 'doughnut',
             data: {
-                // Dataset dummy — cuma alasan Chart.js butuh minimal 1 dataset.
-                // Visualnya 100% digambar oleh gaugePlugin di atas.
                 datasets: [{ data: [1], backgroundColor: 'transparent', borderWidth: 0 }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false, // animasi Chart.js dimatikan, kita animasikan manual lewat displayPercent
+                animation: false,
                 events: [],
                 plugins: {
                     legend: { display: false },
@@ -85,7 +88,7 @@ export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean
         function step(now: number) {
             const elapsed = now - startTime
             const t = Math.min(elapsed / duration, 1)
-            const eased = 1 - Math.pow(1 - t, 3) // easeOutCubic
+            const eased = 1 - Math.pow(1 - t, 3)
             displayPercent.value = start + (target - start) * eased
             chartInstance?.draw()
 
@@ -101,14 +104,13 @@ export function useStatusGauge(targetPercent: Ref<number>, sensorOk: Ref<boolean
         animationFrameId = requestAnimationFrame(step)
     }
 
-    // Tiap targetPercent berubah (misal update dari MQTT), animasikan ke nilai baru
     watch(targetPercent, (newVal) => animateTo(newVal))
-    // Sensor error/pulih harus langsung ubah warna arc walau persennya sama
     watch(sensorOk, () => chartInstance?.draw())
+    watch(colorOverride, () => chartInstance?.draw())
 
     onMounted(() => {
         createChart()
-        animateTo(targetPercent.value) // animasi awal: dari 0% naik ke nilai sekarang
+        animateTo(targetPercent.value)
     })
 
     onBeforeUnmount(() => {

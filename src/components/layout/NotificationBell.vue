@@ -2,7 +2,7 @@
 import { ref, computed, inject } from 'vue'
 import { Bell, AlertTriangle, BatteryWarning } from 'lucide-vue-next'
 import { useClickOutside } from '@/composables/useClickOutside'
-import { formatRelativeTime } from '@/utils/formatTime'
+import { formatRelativeTime } from '@/utils/FormatTime'
 import type { useRopiRealtime } from '@/composables/useRopiRealtime'
 import type { RopiEvent } from '@/types/ropi'
 

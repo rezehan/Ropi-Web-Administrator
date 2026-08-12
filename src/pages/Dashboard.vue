@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Activity, Mic, Move } from 'lucide-vue-next'
 import ChildStatusCard from '@/components/dashboard/ChildStatusCard.vue'
+import { useChildStatusFromMqtt } from '@/composables/useChildStatusFromMqtt'
 import SensorStatCard from '@/components/dashboard/SensorStatCard.vue'
 import CameraFeedCard from '@/components/dashboard/CameraFeedCard.vue'
 import LocationMapCard from '@/components/dashboard/LocationMapCard.vue'
@@ -25,13 +26,14 @@ watch(latestAlarm, (alarm) => {
     }
 })
 
+const { percent, history, statusAnomali, sensorOk } = useChildStatusFromMqtt()
+
 // --- Baterai: field ini datang dari topic "ropi/status", BUKAN dari payload
 // telemetry — makanya diambil dari deviceStatus, bukan latestAlarm. Firmware
 // ropi-esp32-01 yang kamu kirim kemarin belum publish ke topic ini sama sekali,
 // jadi selama itu belum ditambahkan di firmware, batteryPercent akan diam di 0%
 // (bukan berarti baterainya benar-benar kritis — cuma belum ada datanya). ---
 const deviceBattery = computed(() => deviceStatus[DEVICE_ID]?.battery)
-const batteryPercent = computed(() => deviceBattery.value ?? 0)
 const batteryHistory = ref<number[]>([])
 watch(deviceBattery, (val) => {
     if (val === undefined) return
@@ -48,7 +50,7 @@ const flexSensorOk = computed(() => latestAlarm.value?.flex_sensor_ok ?? true)
 <template>
     <div class="space-y-6">
         <!-- Baris 1: Kartu Baterai (Hero) -->
-        <ChildStatusCard :percent="batteryPercent" :history="batteryHistory" />
+        <ChildStatusCard :percent="percent" :history="history" :status-anomali="statusAnomali" :sensor-ok="sensorOk" />
 
         <!-- Baris 2: Sensor Suara, Gerakan, Tekukan -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

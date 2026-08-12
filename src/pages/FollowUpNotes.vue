@@ -35,10 +35,13 @@ const isEditing = ref(!hasExistingData.value)
 const isSaving = ref(false)
 const savedRecently = ref(false)
 
-const saveProfile = handleSubmit(async (formValues) => {
+const saveProfile = handleSubmit(async (_formValues) => {
     isSaving.value = true
     try {
-        // formValues di sini sudah sepenuhnya Type-Safe sesuai file validates.ts
+        // TODO: _formValues (Type-Safe sesuai validates.ts) belum benar-benar
+        // dikirim ke backend -- di bawah ini masih simulasi delay doang.
+        // Pas endpoint simpan profil anak sudah ada, ganti baris di bawah
+        // jadi POST beneran pakai _formValues (dan hapus underscore-nya).
         await new Promise((resolve) => setTimeout(resolve, 400)) // simulasi request
 
         savedRecently.value = true
@@ -140,7 +143,7 @@ function startEditing() {
                             @update:model-value="(val) => setFieldValue('guardian.nama', val)" label="Nama Wali"
                             placeholder="Nama orang tua / wali" />
                         <p v-if="errors['guardian.nama']" class="text-red-500 text-xs mt-1">{{ errors['guardian.nama']
-                            }}</p>
+                        }}</p>
                     </div>
                     <div>
                         <FormField :model-value="values.guardian.hubungan"

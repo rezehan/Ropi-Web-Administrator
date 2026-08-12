@@ -3,7 +3,6 @@ import { ref, provide } from 'vue'
 import {
     LayoutDashboard,
     AlertTriangle,
-    Cpu,
     UserRound,
     ClipboardList,
     BellRing,
@@ -14,6 +13,8 @@ import SidebarNavItem from '@/components/layout/SidebarNavItem.vue'
 import NotificationBell from '@/components/layout/NotificationBell.vue'
 import ProfileMenu from '@/components/layout/ProfileMenu.vue'
 import { useRopiRealtime } from '@/composables/useRopiRealtime'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const navItems = [
     { to: '/', label: 'Telemetri', icon: LayoutDashboard },
@@ -37,9 +38,12 @@ function closeSidebar() {
     isSidebarOpen.value = false
 }
 
-function handleLogout() {
-    // TODO: hapus token/session lalu redirect ke halaman login
-    console.log('Logout')
+const router = useRouter()
+const authStore = useAuthStore()
+
+async function handleLogout() {
+    await authStore.logout()
+    router.push('/login')
 }
 </script>
 
